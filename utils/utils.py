@@ -1,5 +1,8 @@
-import re
 from typing import List
+
+import re
+import ast
+import json
 
 
 def process_json_format(text: str) -> str:
@@ -37,3 +40,13 @@ def convert_text_file_to_list_of_string(file_path: str) -> str:
     result = ", ".join(items)
     return result
 
+def convert_json_format(text: str) -> str:
+    """
+    Convert a string to a JSON format by replacing single quotes with double quotes,
+    removing unnecessary characters, and ensuring proper formatting.
+    """
+    data_dict = ast.literal_eval(text)
+
+    # Convert to JSON
+    json_str = json.dumps(data_dict, indent=2)
+    return json_str

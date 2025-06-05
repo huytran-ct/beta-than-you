@@ -10,6 +10,7 @@ import os
 load_dotenv()  # Load environment variables from .env file
 LITELLM_API_KEY = os.getenv("LITELLM_API_KEY", "")
 
+
 class LLMModelRouter:
     _instance = None
 
@@ -21,8 +22,8 @@ class LLMModelRouter:
     def __init__(self, host: str, api_key: str, system_role_instruction: str = ""):
         if not hasattr(self, 'initialized'):
             self.router = openai.AsyncOpenAI(
-                base_url=host,
-                api_key=api_key
+                # base_url=host,
+                # api_key=api_key
             )
             self.system_role_instruction = system_role_instruction
             self.initialized = True

@@ -17,11 +17,13 @@ def write_dataframe_to_sqlite(df: pd.DataFrame, db_path: str, table_name: str):
 if __name__ == "__main__":
     # Example DataFrame
     ad_info_df = pd.read_csv("data/ad_info.csv")
-    ad_performance_df = pd.read_csv("data/pty_ad_performance.csv")
+    ad_performance_df = pd.read_csv("data/ad_performance.csv")
     orders_df = pd.read_csv("data/orders.csv")
+    ad_quality_df = pd.read_csv("data/ad_quality.csv")  
 
     # Write DataFrame to SQLite database
-    write_dataframe_to_sqlite(ad_info_df, "hackathon.db", "ad_info")
-    write_dataframe_to_sqlite(ad_performance_df, "hackathon.db", "ad_performance")
-    write_dataframe_to_sqlite(orders_df, "hackathon.db", "orders")
+    write_dataframe_to_sqlite(ad_info_df.fillna(0), "hackathon.db", "ad_info")
+    write_dataframe_to_sqlite(ad_performance_df.fillna(0), "hackathon.db", "ad_performance")
+    write_dataframe_to_sqlite(orders_df.fillna(0), "hackathon.db", "orders")
+    write_dataframe_to_sqlite(ad_quality_df.fillna(0), "hackathon.db", "ad_quality")
     print("DataFrame written to SQLite database successfully.")

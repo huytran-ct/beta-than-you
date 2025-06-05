@@ -11,7 +11,7 @@ The result should be written by Vietnamese language. Use the normal tone, not to
 
 
 LLM_MODELS = {
-    "ad_performance_summary": AdPerformanceSummary(system_prompt=ad_performance_prompt, model_name=LLMModels.VERTEXAI_GEMINI_15_FLASH.value.lower())}
+    "ad_performance_summary": AdPerformanceSummary(system_prompt=ad_performance_prompt, model_name=LLMModels.OPENAI_GPT_40_MINI.value.lower())}
 
 def get_llm_model(model_name: str):
     """
