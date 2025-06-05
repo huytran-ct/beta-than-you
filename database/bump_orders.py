@@ -1,0 +1,53 @@
+import sqlite3
+from typing import Dict, List
+
+class BumpOrderByHour:
+    def __init__(self, db_path: str = "hackathon.db"):
+        self.db_path = db_path
+    
+    def get_order(self, ad_type: str, category: int, city_id: int,  district_id: int) -> List[Dict]:
+        """Get top pages for a specific hour."""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    SELECT city_name, district_name, hour, bump_order
+                    FROM bump_by_hour 
+                    WHERE ad_type = ?
+                    AND category = ?
+                    AND city_id = ?
+                    AND district_id = ?
+                    ORDER BY hour DESC
+                ''', (ad_type, category, city_id, district_id))
+                
+                columns = ['city_name', 'district_name', 'hour', 'bump_order']
+                return [dict(zip(columns, row)) for row in cursor.fetchall()]
+        except Exception as e:
+            print(f"Error getting top pages by hour: {e}")
+            return []
+
+
+class BumpOrderByWeek:
+    def __init__(self, db_path: str = "hackathon.db"):
+        self.db_path = db_path
+
+    def get_order(self, ad_type: str, category: int, city_id: int,  district_id: int) -> List[Dict]:
+        """Get top pages for a specific hour."""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    SELECT city_name, district_name, weekday, bump_order
+                    FROM bump_by_week 
+                    WHERE ad_type = ?
+                    AND category = ?
+                    AND city_id = ?
+                    AND district_id = ?
+                    ORDER BY weekday DESC
+                ''', (ad_type, category, city_id, district_id))
+                
+                columns = ['city_name', 'district_name', 'weekday', 'bump_order']
+                return [dict(zip(columns, row)) for row in cursor.fetchall()]
+        except Exception as e:
+            print(f"Error getting top pages by week: {e}")
+            return []
