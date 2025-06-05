@@ -3,6 +3,7 @@ load_dotenv()
 from fastapi import FastAPI
 from clients.slack_client import send_slack_webhook
 from router.ad_info import router as ad_info_router
+from router.ads_register import router as ads_register_router
 from contextlib import asynccontextmanager
 from datetime import datetime
 import logging
@@ -33,14 +34,14 @@ async def lifespan(app: FastAPI):
     logger.info("FastAPI application is starting up...")
     
     # Schedule periodic Slack messages every 10 minutes using cron
-    scheduler.add_job(
-        send_periodic_slack_message,
-        CronTrigger(minute="*/2"),  # Every 2 minutes
-        id="periodic_slack_message",
-        name="Send periodic Slack message",
-        replace_existing=True,
-        max_instances=1
-    )
+    # scheduler.add_job(
+    #     send_periodic_slack_message,
+    #     CronTrigger(minute="*/2"),  # Every 2 minutes
+    #     id="periodic_slack_message",
+    #     name="Send periodic Slack message",
+    #     replace_existing=True,
+    #     max_instances=1
+    # )
     
     # Start the scheduler
     scheduler.start()
@@ -68,6 +69,9 @@ def health_check():
 # Include the ad_info router
 app.include_router(ad_info_router)
 
+# Include the ads_register router
+app.include_router(ads_register_router)
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
