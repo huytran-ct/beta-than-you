@@ -14,6 +14,7 @@ class AdRegistration(BaseModel):
 class UserRegistrationRequest(BaseModel):
     """Model for creating/updating user ad registrations."""
     user_id: int = Field(..., gt=0, description="User ID must be positive")
+    user_name: Optional[str] = Field(None, description="User name for reference")
     ads: List[AdRegistration] = Field(..., min_items=1, description="List of ads to register")
 
 
@@ -78,7 +79,7 @@ async def register_user_ads(request: UserRegistrationRequest):
             )
         
         await send_slack_webhook(
-            message=f"User {request.user_id} registered {len(ad_ids)} ads for Smart Assistant feature: {', '.join(titles)}",
+            message=f"Chị Tốt AI đã tự động chăm sóc các tin đăng của {request.user_name} rồi. Chờ xem kết quả trong vài ngày tới nhé.",
         )
         # Return success response with registration data
         return ApiResponse(

@@ -57,7 +57,3 @@ async def send_slack_webhook(message: Union[str, Dict[str, Any]]) -> bool:
             await asyncio.sleep(1)
     
     return False
-
-# Example usage
-import asyncio
-asyncio.run(send_slack_webhook("Hello, this is from hackathon team Beta Than You!"))
