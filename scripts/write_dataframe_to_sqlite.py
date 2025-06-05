@@ -19,11 +19,21 @@ if __name__ == "__main__":
     ad_info_df = pd.read_csv("data/ad_info.csv")
     ad_performance_df = pd.read_csv("data/ad_performance.csv")
     orders_df = pd.read_csv("data/orders.csv")
-    ad_quality_df = pd.read_csv("data/ad_quality.csv")  
+    ad_quality_df = pd.read_csv("data/ad_quality.csv")
+
+    bump_order_by_hour = pd.read_csv("data/bump_order_by_hour.csv")
+    bump_order_by_week = pd.read_csv("data/bump_order_by_week.csv")
+
+    pageview_by_hour = pd.read_csv("data/pageview_by_hour.csv")
+    pageview_by_week = pd.read_csv("data/pageview_by_week.csv")
 
     # Write DataFrame to SQLite database
     write_dataframe_to_sqlite(ad_info_df.fillna(0), "hackathon.db", "ad_info")
     write_dataframe_to_sqlite(ad_performance_df.fillna(0), "hackathon.db", "ad_performance")
     write_dataframe_to_sqlite(orders_df.fillna(0), "hackathon.db", "orders")
     write_dataframe_to_sqlite(ad_quality_df.fillna(0), "hackathon.db", "ad_quality")
+    write_dataframe_to_sqlite(bump_order_by_hour.fillna(0), "hackathon.db", "bump_by_hour")
+    write_dataframe_to_sqlite(bump_order_by_week.fillna(0), "hackathon.db", "bump_by_week")
+    write_dataframe_to_sqlite(pageview_by_hour.fillna(0), "hackathon.db", "pageview_by_hour")
+    write_dataframe_to_sqlite(pageview_by_week.fillna(0), "hackathon.db", "pageview_by_week")
     print("DataFrame written to SQLite database successfully.")
