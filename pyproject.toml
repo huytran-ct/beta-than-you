@@ -1,0 +1,20 @@
+[project]
+name = "agent-test"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "dotenv>=0.9.9",
+    "fastapi>=0.115.12",
+    "google-cloud-bigquery>=3.34.0",
+    "google-cloud-bigquery-storage>=2.32.0",
+    "jupyter>=1.1.1",
+    "langfuse>=2.60.3",
+    "litellm>=1.68.2",
+    "llama-index>=0.12.33",
+    "llama-index-tools-graphql>=0.3.0",
+    "llama-index-tools-mcp>=0.1.2",
+    "mcp>=1.6.0",
+    "pyarrow>=20.0.0",
+]

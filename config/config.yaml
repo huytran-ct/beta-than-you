@@ -1,0 +1,7 @@
+
+langfuse:
+  host: "https://langfuse-183025253900.asia-southeast1.run.app"
+
+litellm:
+  host: https://llm.chotot.org/
+  api_key: ""

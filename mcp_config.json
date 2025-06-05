@@ -1,0 +1,11 @@
+{
+    "mcp":[
+        {
+            "command": "python",
+            "args": [
+                "weather.py"
+            ],
+            "env": null
+        }
+    ]
+}
