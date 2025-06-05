@@ -4,7 +4,7 @@ Install depencies by uv
 uv pip install
 ```
 # Download Data
-download the ad-info, ad-performance and orders from `https://storage.cloud.google.com/ct-ai-temp/hackathon/` and put them to data/ folder
+download the ad-info, ad-performance and orders from `https://console.cloud.google.com/storage/browser/ct-ai-temp/hackathon` and put them to data/ folder
 
 # Create the database
 Run script
