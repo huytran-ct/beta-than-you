@@ -448,3 +448,229 @@ async def flush_all_registrations():
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"An error occurred while flushing data: {str(e)}"
         )
+
+
+# Bump-related endpoints
+
+@router.get("/unbumped-ads", response_model=ApiResponse)
+async def get_unbumped_ads():
+    """
+    Get all ads that haven't been bumped yet.
+    
+    Returns:
+        List of unbumped ads with user_id, ad_id, and title
+    """
+    try:
+        ads_register_db = AdsRegisterDatabase()
+        unbumped_ads = ads_register_db.get_unbumped_ads()
+        
+        return ApiResponse(
+            success=True,
+            message=f"Found {len(unbumped_ads)} unbumped ads",
+            data={
+                "unbumped_ads": unbumped_ads,
+                "count": len(unbumped_ads)
+            }
+        )
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An error occurred while fetching unbumped ads: {str(e)}"
+        )
+
+
+@router.post("/bump-ad", response_model=ApiResponse)
+async def manual_bump_ad(user_id: int, ad_id: int):
+    """
+    Manually mark a specific ad as bumped.
+    
+    Args:
+        user_id: The user ID
+        ad_id: The ad ID to mark as bumped
+        
+    Returns:
+        API response confirming the bump operation
+    """
+    try:
+        ads_register_db = AdsRegisterDatabase()
+        
+        # Check if user registration exists
+        user_data = ads_register_db.read_user_registration(user_id)
+        if not user_data:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"User {user_id} not found"
+            )
+        
+        # Check if ad exists for this user
+        if ad_id not in user_data['list_ad_ids']:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Ad {ad_id} is not registered for user {user_id}"
+            )
+        
+        # Mark as bumped
+        success = ads_register_db.mark_ad_as_bumped(user_id, ad_id)
+        
+        if success:
+            return ApiResponse(
+                success=True,
+                message=f"Ad {ad_id} successfully marked as bumped for user {user_id}",
+                data={"user_id": user_id, "ad_id": ad_id, "bumped": True}
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to mark ad as bumped"
+            )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An error occurred while bumping ad: {str(e)}"
+        )
+
+
+@router.post("/reset-bumped", response_model=ApiResponse)
+async def reset_all_bumped_ads():
+    """
+    Reset all bumped ad statuses (start a new bump cycle).
+    This will clear all bumped_ad_ids so all ads can be bumped again.
+    
+    Returns:
+        API response confirming the reset operation
+    """
+    try:
+        ads_register_db = AdsRegisterDatabase()
+        success = ads_register_db.reset_bumped_ads()
+        
+        if success:
+            return ApiResponse(
+                success=True,
+                message="All bumped ad statuses have been reset. New bump cycle started.",
+                data={"reset": True}
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to reset bumped ad statuses"
+            )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An error occurred while resetting bumped ads: {str(e)}"
+        )
+
+
+@router.get("/bump-status", response_model=ApiResponse)
+async def get_bump_status():
+    """
+    Get the current bump status including total ads, bumped ads, and progress.
+    
+    Returns:
+        Current bump cycle status and statistics
+    """
+    try:
+        ads_register_db = AdsRegisterDatabase()
+        
+        all_registrations = ads_register_db.get_all_registrations()
+        unbumped_ads = ads_register_db.get_unbumped_ads()
+        total_bumped = ads_register_db.get_bumped_ads_count()
+        
+        # Calculate total ads across all users
+        total_ads = sum(len(reg['list_ad_ids']) for reg in all_registrations)
+        
+        return ApiResponse(
+            success=True,
+            message="Bump status retrieved successfully",
+            data={
+                "total_ads": total_ads,
+                "bumped_ads": total_bumped,
+                "unbumped_ads": len(unbumped_ads),
+                "progress_percentage": round((total_bumped / total_ads * 100) if total_ads > 0 else 0, 2),
+                "users_count": len(all_registrations),
+                "cycle_complete": len(unbumped_ads) == 0
+            }
+        )
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An error occurred while getting bump status: {str(e)}"
+        )
+
+
+@router.post("/trigger-bump", response_model=ApiResponse)
+async def trigger_manual_bump():
+    """
+    Manually trigger the ad bump process (same as scheduler).
+    This will randomly select up to 2 unbumped ads and send bump messages.
+    
+    Returns:
+        API response with details of the bumped ads
+    """
+    try:
+        ads_register_db = AdsRegisterDatabase()
+        
+        # Get unbumped ads
+        unbumped_ads = ads_register_db.get_unbumped_ads()
+        
+        if len(unbumped_ads) == 0:
+            ads_register_db.reset_bumped_ads()
+            unbumped_ads = ads_register_db.get_unbumped_ads()
+        
+        if len(unbumped_ads) == 0:
+            return ApiResponse(
+                success=True,
+                message="No ads available for bumping",
+                data={"bumped_ads": [], "count": 0}
+            )
+        
+        # Randomly select up to 2 ads
+        import random
+        from datetime import datetime, timezone, timedelta
+        
+        selected_count = min(2, len(unbumped_ads))
+        selected_ads = random.sample(unbumped_ads, selected_count)
+        
+        current_time = datetime.now(timezone(timedelta(hours=7))).strftime('%d-%m-%Y %H:%M')
+        bumped_ads = []
+        
+        for ad in selected_ads:
+            # Create bump message
+            message = f"🔥 Ad BUMPED! Tin đăng '{ad['title']}' (ID: {ad['ad_id']}) đã được bump lúc {current_time}. Check hiệu quả <http://localhost:8080|tại đây>!"
+            
+            # Send Slack message
+            await send_slack_webhook(message)
+            
+            # Mark ad as bumped
+            ads_register_db.mark_ad_as_bumped(ad['user_id'], ad['ad_id'])
+            
+            bumped_ads.append({
+                "user_id": ad['user_id'],
+                "ad_id": ad['ad_id'],
+                "title": ad['title'],
+                "bumped_at": current_time
+            })
+        
+        return ApiResponse(
+            success=True,
+            message=f"Successfully bumped {selected_count} ads and sent Slack notifications",
+            data={
+                "bumped_ads": bumped_ads,
+                "count": selected_count,
+                "timestamp": current_time
+            }
+        )
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An error occurred while triggering manual bump: {str(e)}"
+        )

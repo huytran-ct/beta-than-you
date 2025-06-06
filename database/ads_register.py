@@ -29,9 +29,15 @@ class AdsRegisterDatabase:
                 CREATE TABLE IF NOT EXISTS ads_register (
                     user_id INTEGER PRIMARY KEY,
                     list_ad_ids TEXT NOT NULL,
-                    list_titles TEXT NOT NULL
+                    list_titles TEXT NOT NULL,
+                    bumped_ad_ids TEXT DEFAULT '[]'
                 )
             """)
+            # Add bumped_ad_ids column to existing tables
+            cursor.execute("PRAGMA table_info(ads_register)")
+            columns = [column[1] for column in cursor.fetchall()]
+            if 'bumped_ad_ids' not in columns:
+                cursor.execute("ALTER TABLE ads_register ADD COLUMN bumped_ad_ids TEXT DEFAULT '[]'")
             conn.commit()
 
     def _serialize_list(self, data: List[Any]) -> str:
@@ -83,9 +89,9 @@ class AdsRegisterDatabase:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
                 cursor.execute("""
-                    INSERT OR REPLACE INTO ads_register (user_id, list_ad_ids, list_titles)
-                    VALUES (?, ?, ?)
-                """, (user_id, self._serialize_list(ad_ids), self._serialize_list(titles)))
+                    INSERT OR REPLACE INTO ads_register (user_id, list_ad_ids, list_titles, bumped_ad_ids)
+                    VALUES (?, ?, ?, ?)
+                """, (user_id, self._serialize_list(ad_ids), self._serialize_list(titles), self._serialize_list([])))
                 conn.commit()
                 return True
         except sqlite3.Error:
@@ -110,7 +116,8 @@ class AdsRegisterDatabase:
                 return {
                     'user_id': row[0],
                     'list_ad_ids': self._deserialize_list(row[1]),
-                    'list_titles': self._deserialize_list(row[2])
+                    'list_titles': self._deserialize_list(row[2]),
+                    'bumped_ad_ids': self._deserialize_list(row[3]) if len(row) > 3 else []
                 }
             return None
 
@@ -236,7 +243,8 @@ class AdsRegisterDatabase:
                 {
                     'user_id': row[0],
                     'list_ad_ids': self._deserialize_list(row[1]),
-                    'list_titles': self._deserialize_list(row[2])
+                    'list_titles': self._deserialize_list(row[2]),
+                    'bumped_ad_ids': self._deserialize_list(row[3]) if len(row) > 3 else []
                 }
                 for row in rows
             ]
@@ -273,3 +281,101 @@ class AdsRegisterDatabase:
             cursor.execute("DELETE FROM ads_register")
             conn.commit()
             print("All data has been removed from the ads_register table.")
+
+    def get_unbumped_ads(self) -> List[Dict[str, Any]]:
+        """
+        Get all ads that haven't been bumped yet.
+        
+        Returns:
+            List of dictionaries containing ad information for unbumped ads.
+            Each dict contains: {'user_id': int, 'ad_id': int, 'title': str}
+        """
+        unbumped_ads = []
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT user_id, list_ad_ids, list_titles, bumped_ad_ids FROM ads_register")
+            rows = cursor.fetchall()
+            
+            for row in rows:
+                user_id = row[0]
+                ad_ids = self._deserialize_list(row[1])
+                titles = self._deserialize_list(row[2])
+                bumped_ad_ids = self._deserialize_list(row[3]) if len(row) > 3 and row[3] else []
+                
+                # Find ads that haven't been bumped
+                for i, ad_id in enumerate(ad_ids):
+                    if ad_id not in bumped_ad_ids:
+                        unbumped_ads.append({
+                            'user_id': user_id,
+                            'ad_id': ad_id,
+                            'title': titles[i] if i < len(titles) else f"Ad {ad_id}"
+                        })
+        
+        return unbumped_ads
+
+    def mark_ad_as_bumped(self, user_id: int, ad_id: int) -> bool:
+        """
+        Mark a specific ad as bumped for a user.
+        
+        Args:
+            user_id: The user ID.
+            ad_id: The ad ID to mark as bumped.
+            
+        Returns:
+            True if successfully marked, False otherwise.
+        """
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT bumped_ad_ids FROM ads_register WHERE user_id = ?", (user_id,))
+                row = cursor.fetchone()
+                
+                if row:
+                    bumped_ad_ids = self._deserialize_list(row[0]) if row[0] else []
+                    if ad_id not in bumped_ad_ids:
+                        bumped_ad_ids.append(ad_id)
+                        cursor.execute(
+                            "UPDATE ads_register SET bumped_ad_ids = ? WHERE user_id = ?",
+                            (self._serialize_list(bumped_ad_ids), user_id)
+                        )
+                        conn.commit()
+                    return True
+                return False
+        except sqlite3.Error:
+            return False
+
+    def reset_bumped_ads(self) -> bool:
+        """
+        Reset all bumped ad statuses (clear all bumped_ad_ids).
+        Useful for starting a new bump cycle.
+        
+        Returns:
+            True if successfully reset, False otherwise.
+        """
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute("UPDATE ads_register SET bumped_ad_ids = ?", (self._serialize_list([]),))
+                conn.commit()
+                return True
+        except sqlite3.Error:
+            return False
+
+    def get_bumped_ads_count(self) -> int:
+        """
+        Get the total count of bumped ads across all users.
+        
+        Returns:
+            Total number of bumped ads.
+        """
+        total_bumped = 0
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT bumped_ad_ids FROM ads_register")
+            rows = cursor.fetchall()
+            
+            for row in rows:
+                bumped_ad_ids = self._deserialize_list(row[0]) if row[0] else []
+                total_bumped += len(bumped_ad_ids)
+                
+        return total_bumped
